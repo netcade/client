@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Threading.Tasks;
+using Netcade.Objects;
+using Netcade.SocketObjects;
 using SocketIOClient;
 using SocketIOClient.Newtonsoft.Json;
 using UnityEngine;
@@ -19,13 +22,13 @@ public class ServerConnector : MonoBehaviour
     public TMP_InputField Username;
     public TMP_InputField Server;
     public Button LoginButton;
-    
+    public Button CreateGameButton;
     public User thisUser = new User();
     void Start()
     {
         LoginButton.onClick.AddListener(LogIn);
-        LoginButton.enabled = false;
         ConnectButton.onClick.AddListener(Connect);
+        CreateGameButton.onClick.AddListener(CreateGame);
     }
 
     void Connect()
@@ -47,7 +50,6 @@ public class ServerConnector : MonoBehaviour
         socket.OnConnected += async (sender, e) =>
         {
             Debug.Print("socket.OnConnected");
-            LoginButton.enabled = true;
             await EmitConnectionTest();
         };
         socket.OnPing += (sender, e) => { Debug.Print("Ping"); };
@@ -70,18 +72,56 @@ public class ServerConnector : MonoBehaviour
         //socket.Emit("test");
     }
 
-    public class User
+    private bool loggedIn = false;
+
+    void InitializeListeners()
     {
-        public int Id = -1;
-        public string Username = "";
+        socket.On("joinGame", JoinGame);
+        socket.On("newGame", JoinGame);
     }
     void LogIn()
     {
+        socket.On("yourId", (e) =>
+        {
+            thisUser.Id = e.GetValue<int>();
+            UnityEngine.Debug.Log("Got USER ID! - " + thisUser.Id);
+            loggedIn = true;
+            InitializeListeners();
+        });
         thisUser.Username = Username.text;
         socket.Emit("login", thisUser);
     }
 
+    void CreateGame()
+    {
+        socket.Emit("createGame");
+    }
 
+    void NewGame(SocketIOResponse response)
+    {
+        // TODO: show
+    }
+
+    // void JoinGame(int id)
+    // {
+    //     // send
+    //     socket.Emit("joinGame", id);
+    // }
+
+    void JoinGame(SocketIOResponse response)
+    {
+        UnityEngine.Debug.Log("Attempting to join game...");
+        // recieve
+        try
+        {
+            SOGame game = response.GetValue<SOGame>();
+            UnityEngine.Debug.Log("Joining: " + game.name);
+        }
+        catch (Exception e)
+        {
+            UnityEngine.Debug.LogError(e);
+        }
+    }
     public static bool IsJSON(string str)
     {
         if (string.IsNullOrWhiteSpace(str))

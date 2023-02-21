@@ -18,8 +18,13 @@ public class ServerConnector : MonoBehaviour
     public Button ConnectButton;
     public TMP_InputField Username;
     public TMP_InputField Server;
+    public Button LoginButton;
+    
+    public User thisUser = new User();
     void Start()
     {
+        LoginButton.onClick.AddListener(LogIn);
+        LoginButton.enabled = false;
         ConnectButton.onClick.AddListener(Connect);
     }
 
@@ -42,6 +47,7 @@ public class ServerConnector : MonoBehaviour
         socket.OnConnected += async (sender, e) =>
         {
             Debug.Print("socket.OnConnected");
+            LoginButton.enabled = true;
             await EmitConnectionTest();
         };
         socket.OnPing += (sender, e) => { Debug.Print("Ping"); };
@@ -61,7 +67,18 @@ public class ServerConnector : MonoBehaviour
         {
             ReceivedText.text += "Received On " + name + " : " + response.ToString() + "\n";
         });
-        socket.Emit("test");
+        //socket.Emit("test");
+    }
+
+    public class User
+    {
+        public int Id = -1;
+        public string Username = "";
+    }
+    void LogIn()
+    {
+        thisUser.Username = Username.text;
+        socket.Emit("login", thisUser);
     }
 
 

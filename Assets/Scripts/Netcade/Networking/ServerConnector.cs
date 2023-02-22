@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Netcade.Debug;
 using Netcade.Networking;
 using Netcade.Objects;
 using Netcade.SocketObjects;
@@ -66,10 +67,11 @@ public class ServerConnector : MonoBehaviour
 
         //socket.OnUnityThread("spin", (data) => { rotateAngle = 0; });
 
-        ReceivedText.text = "";
+        //ReceivedText.text = "";
         socket.OnAnyInUnityThread((name, response) =>
         {
-            ReceivedText.text += "Received On " + name + " : " + response.ToString() + "\n";
+            Netcade.Debug.Logging.Log("Received On " + name + " : " + response.ToString(), Logging.LogType.Networking, "Networking");
+            //ReceivedText.text += "Received On " + name + " : " + response.ToString() + "\n";
         });
         //socket.Emit("test");
     }
@@ -85,13 +87,23 @@ public class ServerConnector : MonoBehaviour
 
     void LogIn()
     {
+        Netcade.Debug.Logging.Log("Logging in...", Logging.LogType.Info, "Networking");
         ServerData.ThisUser = new User();
         socket.On("yourId", (e) =>
         {
-            ServerData.ThisUser.Id = e.GetValue<int>();
-            UnityEngine.Debug.Log("Got USER ID! - " + ServerData.ThisUser.Id);
-            loggedIn = true;
-            InitializeListeners();
+            try
+            {
+                ServerData.ThisUser.Id = e.GetValue<int>();
+                Netcade.Debug.Logging.Log("- Recevied user id: " + ServerData.ThisUser.Id, Logging.LogType.Info,
+                    "Networking");
+                loggedIn = true;
+                InitializeListeners();
+            }
+            catch
+            {
+                UnityEngine.Debug.LogError(e);
+                Netcade.Debug.Logging.Log(e.ToString(), Logging.LogType.Error, "Networking");
+            }
         });
         ServerData.ThisUser.Username = Username.text;
         socket.Emit("login", ServerData.ThisUser);
@@ -115,16 +127,18 @@ public class ServerConnector : MonoBehaviour
 
     void JoinLobby(SocketIOResponse response)
     {
-        UnityEngine.Debug.Log("Attempting to join game...");
+        Netcade.Debug.Logging.Log("Attempting to join lobby...", Logging.LogType.Info, "Networking");
         // recieve
         try
         {
             SOLobby lobby = response.GetValue<SOLobby>();
+            Netcade.Debug.Logging.Log("Joining lobby: " + lobby.name, Logging.LogType.Info, "Networking");
             UnityEngine.Debug.Log("Joining: " + lobby.name);
         }
         catch (Exception e)
         {
             UnityEngine.Debug.LogError(e);
+            Netcade.Debug.Logging.Log(e.ToString(), Logging.LogType.Error, "Networking");
         }
     }
 
@@ -141,6 +155,7 @@ public class ServerConnector : MonoBehaviour
             }
 
             ServerData.Lobbies = finalLobbies;
+            Netcade.Debug.Logging.Log("Received Lobbies data", Logging.LogType.Info, "Networking");
             UnityMainThreadDispatcher.Instance().Enqueue(() => {
                 var ss = FindObjectsOfType<MonoBehaviour>().OfType<ILobbyListUpdated>();
                 foreach (ILobbyListUpdated s in ss)
@@ -152,6 +167,7 @@ public class ServerConnector : MonoBehaviour
         catch (Exception e)
         {
             UnityEngine.Debug.LogError(e);
+            Netcade.Debug.Logging.Log(e.ToString(), Logging.LogType.Error, "Networking");
         }
     }
 
